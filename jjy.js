@@ -75,7 +75,7 @@
         minute = bit(1, minute,  40);
         minute = bit(2, minute,  20);
         minute = bit(3, minute,  10);
-        minute = bit(4, minute,  16);
+        bit(4, 0, 1); // 未使用。常に0
         minute = bit(5, minute,  8);
         minute = bit(6, minute,  4);
         minute = bit(7, minute,  2);
@@ -86,11 +86,11 @@
 
         // 時
         pa = 0;
-        hour = bit(10, hour, 80);
-        hour = bit(11, hour, 40);
+        bit(10, 0, 1); // 未使用。常に0
+        bit(11, 0, 1); // 未使用。常に0
         hour = bit(12, hour, 20);
         hour = bit(13, hour, 10);
-        hour = bit(14, hour, 16);
+        bit(14, 0, 1); // 未使用。常に0
         hour = bit(15, hour, 8);
         hour = bit(16, hour, 4);
         hour = bit(17, hour, 2);
@@ -100,11 +100,11 @@
         marker(19); // P2
 
         // 1月1日からの通算日
-        year_day = bit(20, year_day, 800);
-        year_day = bit(21, year_day, 400);
+        bit(20, 0, 1); // 未使用。常に0
+        bit(21, 0, 1); // 未使用。常に0
         year_day = bit(22, year_day, 200);
         year_day = bit(23, year_day, 100);
-        year_day = bit(24, year_day, 160);
+        bit(24, 0, 1); // 未使用。常に0
         year_day = bit(25, year_day, 80);
         year_day = bit(26, year_day, 40);
         year_day = bit(27, year_day, 20);
