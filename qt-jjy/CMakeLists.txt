@@ -19,6 +19,10 @@ qt_add_executable(QtJjySimulator
     jjycontroller.h
 )
 
+if(WIN32)
+    target_sources(QtJjySimulator PRIVATE app.rc)
+endif()
+
 qt_add_qml_module(QtJjySimulator
     URI JjySimulator
     VERSION 1.0
@@ -34,6 +38,13 @@ set_target_properties(QtJjySimulator PROPERTIES
     WIN32_EXECUTABLE TRUE
     MACOSX_BUNDLE TRUE
 )
+
+if(ANDROID)
+    set_property(TARGET QtJjySimulator PROPERTY
+        QT_ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
+    set_property(TARGET QtJjySimulator PROPERTY
+        QT_ANDROID_APP_ICON "@drawable/jjy_icon")
+endif()
 
 include(GNUInstallDirs)
 install(TARGETS QtJjySimulator

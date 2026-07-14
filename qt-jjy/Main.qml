@@ -6,7 +6,7 @@ ApplicationWindow {
     id: window
     width: 980
     height: 800
-    minimumWidth: 400
+    minimumWidth: 320
     minimumHeight: 520
     visible: true
     title: qsTr("JJY Simulator")
@@ -14,6 +14,7 @@ ApplicationWindow {
     property int selectedSecond: jjyController.activeSecond
     property bool selectionPinned: false
     property string selectedField: ""
+    property bool compactLayout: width < 650
     property var selectedDefinition: jjyController.bitDefinitions[selectedSecond]
     property real selectedPulse: jjyController.frame[selectedSecond] || 0
 
@@ -49,6 +50,12 @@ ApplicationWindow {
         return qsTr("ビット 0（0.8秒）")
     }
 
+    function controlTextColor() {
+        const background = window.color
+        const luminance = background.r * 0.299 + background.g * 0.587 + background.b * 0.114
+        return luminance > 0.5 ? "#303030" : "#f0f0f0"
+    }
+
     function cellOpacity(definition, pulse) {
         if (definition.category === "unused")
             return 0.32
@@ -81,8 +88,8 @@ ApplicationWindow {
         ColumnLayout {
             // ScrollView の contentItem 内では anchors.centerIn が横スクロール
             // 領域をはみ出すことがあるため、明示的な左右余白を使う。
-            x: 20
-            width: Math.max(360, scrollView.availableWidth - 40)
+            x: window.compactLayout ? 12 : 20
+            width: Math.max(0, scrollView.availableWidth - (window.compactLayout ? 24 : 40))
             spacing: 14
 
             Label {
@@ -110,7 +117,7 @@ ApplicationWindow {
                     contentItem: Text {
                         text: parent.text
                         font: parent.font
-                        color: parent.enabled ? "#f0f0f0" : "#777777"
+                        color: parent.enabled ? window.controlTextColor() : "#777777"
                         verticalAlignment: Text.AlignVCenter
                         leftPadding: parent.indicator.width + parent.spacing
                     }
@@ -123,17 +130,18 @@ ApplicationWindow {
             }
 
             GroupBox {
-                title: qsTr("1. 送信波形（クリック／タップでビット詳細を表示）")
+                title: window.compactLayout ? qsTr("1. 送信波形") :
+                                              qsTr("1. 送信波形（クリック／タップでビット詳細を表示）")
                 Layout.fillWidth: true
-                // 2段 × (バー、項目名、秒番号) と行間を収める。
-                Layout.preferredHeight: 290
+                // 画面幅に応じて、デスクトップは2段、モバイルは6段で表示する。
+                Layout.preferredHeight: window.compactLayout ? 550 : 290
 
                 Grid {
                     anchors.fill: parent
                     anchors.margins: 12
-                    columns: 30
+                    columns: window.compactLayout ? 10 : 30
                     columnSpacing: 3
-                    rowSpacing: 12
+                    rowSpacing: window.compactLayout ? 10 : 12
 
                     Repeater {
                         model: jjyController.frame
@@ -148,7 +156,7 @@ ApplicationWindow {
 
                             Item {
                                 width: parent.width
-                                height: 74
+                                height: window.compactLayout ? 58 : 74
                                 Rectangle {
                                     anchors.bottom: parent.bottom
                                     width: parent.width
@@ -173,6 +181,8 @@ ApplicationWindow {
                             }
                             Label {
                                 width: parent.width
+                                visible: !window.compactLayout
+                                height: visible ? implicitHeight : 0
                                 horizontalAlignment: Text.AlignHCenter
                                 text: definition.name
                                 font.pixelSize: 9
@@ -183,7 +193,7 @@ ApplicationWindow {
                                 width: parent.width
                                 horizontalAlignment: Text.AlignHCenter
                                 text: index
-                                font.pixelSize: 9
+                                font.pixelSize: window.compactLayout ? 10 : 9
                                 color: active ? "white" : "#8f8f8f"
                             }
                         }
@@ -194,7 +204,8 @@ ApplicationWindow {
             GroupBox {
                 title: qsTr("2. JJYタイムコードのフォーマット")
                 Layout.fillWidth: true
-                Layout.preferredHeight: 410
+                // モバイルでは6列×10行にして、項目名と重みを読める高さを確保する。
+                Layout.preferredHeight: window.compactLayout ? 900 : 410
 
                 ColumnLayout {
                     anchors.fill: parent
@@ -233,17 +244,18 @@ ApplicationWindow {
                     Grid {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
-                        columns: 10
+                        columns: window.compactLayout ? 6 : 10
                         columnSpacing: 5
                         rowSpacing: 5
 
                         Repeater {
                             model: jjyController.bitDefinitions
                             delegate: Rectangle {
-                                required property int index
-                                required property var modelData
-                                width: (parent.width - (parent.columns - 1) * parent.columnSpacing) / parent.columns
-                                height: (parent.height - (6 - 1) * parent.rowSpacing) / 6
+                            required property int index
+                            required property var modelData
+                            property int rowCount: Math.ceil(60 / parent.columns)
+                            width: (parent.width - (parent.columns - 1) * parent.columnSpacing) / parent.columns
+                            height: (parent.height - (rowCount - 1) * parent.rowSpacing) / rowCount
                                 radius: 4
                                 color: window.categoryColor(modelData.category)
                                 opacity: window.cellOpacity(modelData, jjyController.frame[index] || 0)
