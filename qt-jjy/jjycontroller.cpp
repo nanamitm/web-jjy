@@ -46,6 +46,7 @@ JjyController::~JjyController()
 bool JjyController::running() const { return m_running; }
 bool JjyController::pending() const { return m_pending; }
 bool JjyController::summerTime() const { return m_summerTime; }
+bool JjyController::timeStationWaveform() const { return m_timeStationWaveform; }
 
 void JjyController::setSummerTime(bool enabled)
 {
@@ -55,6 +56,14 @@ void JjyController::setSummerTime(bool enabled)
     m_displayedFrame.clear();
     updateDisplayedFrame(m_displayedMinute);
     emit summerTimeChanged();
+}
+
+void JjyController::setTimeStationWaveform(bool enabled)
+{
+    if (m_timeStationWaveform == enabled)
+        return;
+    m_timeStationWaveform = enabled;
+    emit timeStationWaveformChanged();
 }
 
 QString JjyController::currentTime() const
@@ -231,7 +240,9 @@ void JjyController::beginAtSecond(const QDateTime &secondBoundary)
     }
 
     m_audioDevice = std::make_unique<JjyAudioDevice>();
-    m_audioDevice->configure(minute, m_summerTime, initialSecond, format.sampleRate());
+    const auto waveformMode = m_timeStationWaveform ? JjyWaveformMode::TimeStationSine
+                                                     : JjyWaveformMode::LegacySquare;
+    m_audioDevice->configure(minute, m_summerTime, initialSecond, format.sampleRate(), waveformMode);
     m_audioDevice->open(QIODevice::ReadOnly);
     m_audioSink = std::make_unique<QAudioSink>(output, format);
     m_audioSink->setBufferSize(format.bytesForDuration(200'000));

@@ -1,7 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
   <head>
+    <meta charset="utf-8">
     <title>Web JJY</title>
+    <link rel="icon" href="favicon.ico" sizes="any">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <style>
       canvas {
@@ -21,6 +23,7 @@
       <canvas id="canvas" width="1000" height="200"></canvas>
     </div>
     <label><input id="summer-time" type="checkbox">夏時間を有効にする</label>
+    <label><input id="audible" type="checkbox">Audible（1 kHzの確認用。電波時計は同期しません）</label>
     <script src="jjy.js"></script>
 
     <h2>このソフトについて</h2>
@@ -56,9 +59,9 @@
     </p>
     <p>
       ただし、一般的な音声アンプは人間の可聴域である20kHz以上の周波数の再生には適していません。
-      そこで、歪んだ波形に含まれる高調波を利用します。
-      ボリュームを大きくして音が割れた状態になると、音声信号は矩形波に近いかたちになります。
-      13.333kHzの矩形波にはその3倍の39.999kHzの周波数成分が含まれるので、約40kHzの電波が出せるというわけです。
+      この版では13.333kHzの正弦波を連続送信し、JJYの時刻コードに従って振幅を変調します。
+      再生回路で生じる高調波のうち、3倍の約39.999kHz成分を利用します。
+      Audibleを有効にすると、動作確認用に1kHzの音声を出力します。このモードでは電波時計を同期できません。
       詳しくは<a href="http://www.starstonesoft.com/jjy_simulator.htm">フリーソフト電波時計用JJYシミュレータのページ</a>を参照してください。
     </p>
 

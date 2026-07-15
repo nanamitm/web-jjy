@@ -1,7 +1,13 @@
 (function() {
+    // 40 kHz の第3高調波を狙う搬送波。Time Station と同様に、
+    // 矩形波ではなく連続した正弦波を使う。
     var freq = 13333;
+    var lowGain = 0.31622776; // -10 dB: JJY の低振幅区間
+    var gainSmoothing = 0.002;
     var ctx;
     var signal;
+    var carrier;
+    var carrierGain;
 
     var AudioContext = window.AudioContext || window.webkitAudioContext;
 
@@ -35,17 +41,19 @@
         var array = [];
         var leapsecond = getleapsecond();
 
+        // JJY は搬送波を連続送信し、各秒の先頭だけ高振幅にする。
+        // Time Station と同じく、残りの区間は無音ではなく -10 dB にする。
+        function transmit(s, duration) {
+            var t = s + offset;
+            if (t < 0) return;
+            carrierGain.gain.setTargetAtTime(1, t, gainSmoothing);
+            carrierGain.gain.setTargetAtTime(lowGain, t + duration, gainSmoothing);
+        }
+
         // 毎分s秒の位置のマーカーを出力する
         function marker(s) {
             array.push(0.2);
-            var t = s + offset;
-            if (t < 0) return;
-            var osc = ctx.createOscillator();
-            osc.type = "square";
-            osc.frequency.value = freq;
-            osc.start(t);
-            osc.stop(t + 0.2);
-            osc.connect(ctx.destination);
+            transmit(s, 0.2);
         }
 
         // パリティービット
@@ -57,14 +65,7 @@
             value -= b ? weight : 0;
             pa += b ? 1 : 0;
             array.push(b ? 0.5 : 0.8);
-            var t = s + offset;
-            if (t < 0) return value;
-            var osc = ctx.createOscillator();
-            osc.type = "square";
-            osc.frequency.value = freq;
-            osc.start(t);
-            osc.stop(t + (b ? 0.5 : 0.8));
-            osc.connect(ctx.destination);
+            transmit(s, b ? 0.5 : 0.8);
             return value;
         }
 
@@ -176,10 +177,21 @@
     }
 
     var intervalId;
-    var summer_time_input = document.getElementById("summer-time")
+    var summer_time_input = document.getElementById("summer-time");
+    var audible_input = document.getElementById("audible");
 
     function start() {
         ctx = new AudioContext();
+        carrierGain = ctx.createGain();
+        carrierGain.gain.setValueAtTime(lowGain, ctx.currentTime);
+        carrierGain.connect(ctx.destination);
+
+        carrier = ctx.createOscillator();
+        carrier.type = "sine";
+        carrier.frequency.value = audible_input.checked ? 1000 : freq;
+        carrier.connect(carrierGain);
+        carrier.start();
+
         var now = Date.now();
         var t = Math.floor(now / (60 * 1000)) * 60 * 1000;
         var next = t + 60 * 1000;
@@ -211,6 +223,8 @@
             ctx.close();
             ctx = null;
         }
+        carrier = null;
+        carrierGain = null;
         signal = undefined;
     }
 
@@ -221,10 +235,12 @@
         if (play_flag) {
             control_button.innerText = "Start";
             play_flag = false;
+            audible_input.disabled = false;
             stop();
         } else {
             control_button.innerText = "Stop";
             play_flag = true;
+            audible_input.disabled = true;
             start();
         }
     });

@@ -16,6 +16,8 @@ class JjyController final : public QObject
     Q_PROPERTY(bool running READ running NOTIFY runningChanged)
     Q_PROPERTY(bool pending READ pending NOTIFY pendingChanged)
     Q_PROPERTY(bool summerTime READ summerTime WRITE setSummerTime NOTIFY summerTimeChanged)
+    Q_PROPERTY(bool timeStationWaveform READ timeStationWaveform WRITE setTimeStationWaveform
+               NOTIFY timeStationWaveformChanged)
     Q_PROPERTY(QString currentTime READ currentTime NOTIFY currentTimeChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(QVariantList frame READ frame NOTIFY frameChanged)
@@ -31,6 +33,8 @@ public:
     bool pending() const;
     bool summerTime() const;
     void setSummerTime(bool enabled);
+    bool timeStationWaveform() const;
+    void setTimeStationWaveform(bool enabled);
     QString currentTime() const;
     QString status() const;
     QVariantList frame() const;
@@ -45,6 +49,7 @@ signals:
     void runningChanged();
     void pendingChanged();
     void summerTimeChanged();
+    void timeStationWaveformChanged();
     void currentTimeChanged();
     void statusChanged();
     void frameChanged();
@@ -67,6 +72,7 @@ private:
     bool m_running = false;
     bool m_pending = false;
     bool m_summerTime = false;
+    bool m_timeStationWaveform = false;
     QString m_status;
     QDateTime m_scheduledStart;
     QDateTime m_displayedMinute;

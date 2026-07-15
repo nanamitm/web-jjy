@@ -107,13 +107,30 @@ ApplicationWindow {
                 color: jjyController.running ? "#087f23" : "#777777"
             }
 
-            RowLayout {
+            Flow {
+                Layout.fillWidth: true
                 Layout.alignment: Qt.AlignHCenter
+                spacing: 10
                 Switch {
                     text: qsTr("夏時間を有効にする")
                     checked: jjyController.summerTime
                     enabled: !jjyController.running && !jjyController.pending
                     onToggled: jjyController.summerTime = checked
+                    contentItem: Text {
+                        text: parent.text
+                        font: parent.font
+                        color: parent.enabled ? window.controlTextColor() : "#777777"
+                        verticalAlignment: Text.AlignVCenter
+                        leftPadding: parent.indicator.width + parent.spacing
+                    }
+                }
+                Switch {
+                    text: qsTr("Time Station方式（正弦波）")
+                    checked: jjyController.timeStationWaveform
+                    enabled: !jjyController.running && !jjyController.pending
+                    onToggled: jjyController.timeStationWaveform = checked
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("オン：連続正弦波を-10 dBで振幅変調。オフ：従来の矩形波を断続出力。")
                     contentItem: Text {
                         text: parent.text
                         font: parent.font
@@ -133,13 +150,13 @@ ApplicationWindow {
                 title: window.compactLayout ? qsTr("1. 送信波形") :
                                               qsTr("1. 送信波形（クリック／タップでビット詳細を表示）")
                 Layout.fillWidth: true
-                // 画面幅に応じて、デスクトップは2段、モバイルは6段で表示する。
-                Layout.preferredHeight: window.compactLayout ? 550 : 290
+                // 画面幅に応じて、デスクトップは2段、モバイルは10段で表示する。
+                Layout.preferredHeight: window.compactLayout ? 880 : 290
 
                 Grid {
                     anchors.fill: parent
                     anchors.margins: 12
-                    columns: window.compactLayout ? 10 : 30
+                    columns: window.compactLayout ? 6 : 30
                     columnSpacing: 3
                     rowSpacing: window.compactLayout ? 10 : 12
 

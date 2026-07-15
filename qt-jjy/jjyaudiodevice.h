@@ -4,6 +4,11 @@
 #include <QIODevice>
 #include <QVector>
 
+enum class JjyWaveformMode {
+    LegacySquare,
+    TimeStationSine,
+};
+
 class JjyAudioDevice final : public QIODevice
 {
 public:
@@ -11,7 +16,8 @@ public:
 
     // initialSecond selects where in the current JJY minute the stream starts.
     void configure(const QDateTime &firstMinute, bool summerTime, int initialSecond,
-                   int sampleRate = 48000);
+                   int sampleRate = 48000,
+                   JjyWaveformMode waveformMode = JjyWaveformMode::LegacySquare);
     QVector<double> currentFrame() const;
 
 protected:
@@ -27,4 +33,6 @@ private:
     int m_sampleRate = 48000;
     qint64 m_sampleIndex = 0;
     qint64 m_frameNumber = -1;
+    JjyWaveformMode m_waveformMode = JjyWaveformMode::LegacySquare;
+    double m_gain = 0.0;
 };
