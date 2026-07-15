@@ -6,8 +6,7 @@ buildscript {
 
     dependencies {
         //noinspection AndroidGradlePluginVersion
-        classpath 'com.android.tools.build:gradle:9.0.0'
-        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:2.3.0"
+        classpath 'com.android.tools.build:gradle:8.8.0'
     }
 }
 
@@ -21,7 +20,7 @@ apply plugin: qtGradlePluginType
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar', '*.aar'])
     //noinspection GradleDependency
-    implementation 'androidx.core:core:1.17.0'
+    implementation 'androidx.core:core:1.16.0'
 }
 
 android {
