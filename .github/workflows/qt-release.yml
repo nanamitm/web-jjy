@@ -1,0 +1,199 @@
+name: Build Qt release packages
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: "6.11.1"
+  ANDROID_NDK_VERSION: "27.2.12479018"
+  ANDROID_API_LEVEL: "36"
+  ANDROID_BUILD_TOOLS_VERSION: "36.0.0"
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-2025
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_msvc2022_64
+          modules: qtmultimedia
+          cache: true
+
+      - name: Configure
+        shell: pwsh
+        run: >-
+          cmake -S qt-jjy -B build/windows -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build/windows --config Release --parallel
+
+      - name: Deploy Qt runtime
+        shell: pwsh
+        run: |
+          $package = "artifacts/QtJjySimulator-windows-x64"
+          New-Item -ItemType Directory -Force $package | Out-Null
+          Copy-Item "build/windows/QtJjySimulator.exe" $package
+          windeployqt --release --compiler-runtime --qmldir qt-jjy "$package/QtJjySimulator.exe"
+          Compress-Archive -Path "$package/*" -DestinationPath "artifacts/QtJjySimulator-windows-x64.zip"
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v7
+        with:
+          name: QtJjySimulator-windows-x64
+          path: artifacts/QtJjySimulator-windows-x64.zip
+          if-no-files-found: error
+
+  android:
+    name: Android arm64-v8a
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+        with:
+          packages: >-
+            platform-tools
+            platforms;android-${{ env.ANDROID_API_LEVEL }}
+            build-tools;${{ env.ANDROID_BUILD_TOOLS_VERSION }}
+            ndk;${{ env.ANDROID_NDK_VERSION }}
+
+      - name: Set Android NDK path
+        shell: bash
+        run: |
+          echo "ANDROID_NDK_ROOT=${ANDROID_SDK_ROOT}/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Install Qt for Android
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: linux
+          target: android
+          arch: android_arm64_v8a
+          modules: qtmultimedia
+          extra: --autodesktop
+          cache: true
+
+      - name: Decode signing keystore
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_STORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          test -n "$ANDROID_KEY_PASSWORD"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "${RUNNER_TEMP}/keystore.jks"
+          chmod 600 "${RUNNER_TEMP}/keystore.jks"
+
+      - name: Configure
+        shell: bash
+        env:
+          QT_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
+          QT_ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          QT_ANDROID_KEYSTORE_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          QT_ANDROID_KEYSTORE_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          "${QT_ROOT_DIR}/bin/qt-cmake" \
+            -S qt-jjy \
+            -B build/android \
+            -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DANDROID_SDK_ROOT="${ANDROID_SDK_ROOT}" \
+            -DANDROID_NDK_ROOT="${ANDROID_NDK_ROOT}" \
+            -DQT_ANDROID_COMPILE_SDK_VERSION="${ANDROID_API_LEVEL}" \
+            -DQT_ANDROID_DEPLOYMENT_TYPE=Release
+
+      - name: Build APK and AAB
+        shell: bash
+        env:
+          QT_ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/keystore.jks
+          QT_ANDROID_KEYSTORE_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          QT_ANDROID_KEYSTORE_STORE_PASS: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          QT_ANDROID_KEYSTORE_KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cmake --build build/android --target apk --parallel
+          cmake --build build/android --target aab --parallel
+
+      - name: Collect Android packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk="$(find build/android -path '*/outputs/apk/release/*-signed.apk' -print -quit)"
+          if [ -z "$apk" ]; then
+            apk="$(find build/android -path '*/outputs/apk/release/*.apk' -print -quit)"
+          fi
+          aab="$(find build/android -path '*/outputs/bundle/release/*.aab' -print -quit)"
+          test -n "$apk"
+          test -n "$aab"
+          mkdir -p artifacts
+          cp "$apk" artifacts/QtJjySimulator-android-arm64-v8a.apk
+          cp "$aab" artifacts/QtJjySimulator-android-arm64-v8a.aab
+
+      - name: Verify Android package signatures
+        shell: bash
+        run: |
+          "${ANDROID_SDK_ROOT}/build-tools/${ANDROID_BUILD_TOOLS_VERSION}/apksigner" verify \
+            --verbose artifacts/QtJjySimulator-android-arm64-v8a.apk
+          jarsigner -verify -strict artifacts/QtJjySimulator-android-arm64-v8a.aab
+
+      - name: Upload Android packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: QtJjySimulator-android-arm64-v8a
+          path: |
+            artifacts/QtJjySimulator-android-arm64-v8a.apk
+            artifacts/QtJjySimulator-android-arm64-v8a.aab
+          if-no-files-found: error
+
+  release:
+    name: Attach packages to GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs:
+      - windows
+      - android
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v7
+        with:
+          path: release-files
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          generate_release_notes: true
+          files: release-files/*

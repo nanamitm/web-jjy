@@ -9,6 +9,15 @@ find_package(Qt6 6.6 REQUIRED COMPONENTS Quick Multimedia)
 
 qt_standard_project_setup(REQUIRES 6.6)
 
+# androiddeployqt reads these variables while generating the APK/AAB targets.
+# The keystore values themselves are supplied through environment variables so
+# they do not become part of the repository or CMake command line.
+if(ANDROID AND CMAKE_BUILD_TYPE STREQUAL "Release" AND
+   DEFINED ENV{QT_ANDROID_KEYSTORE_PATH})
+    set(QT_ANDROID_SIGN_APK TRUE)
+    set(QT_ANDROID_SIGN_AAB TRUE)
+endif()
+
 qt_add_executable(QtJjySimulator
     main.cpp
     jjyframebuilder.cpp
